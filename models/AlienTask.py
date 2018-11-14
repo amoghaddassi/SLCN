@@ -81,11 +81,11 @@ class Task(object):
             n_trials = np.min([n_trials, agent_data.shape[0]])
 
         # Bring into right shape
-        seasons = np.tile(seasons, n_sim_per_subj)
-        aliens = np.tile(aliens, n_sim_per_subj)
-        self.seasons = seasons.reshape([int(len(seasons) / n_trials), n_trials]).astype(int).T
-        self.aliens = aliens.reshape([int(len(aliens) / n_trials), n_trials]).astype(int).T
-        self.phase = np.tile(agent_data["phase"], n_sim_per_subj)
+        #seasons = np.tile(seasons, n_sim_per_subj)
+        #aliens = np.tile(aliens, n_sim_per_subj)
+        #self.seasons = seasons.reshape([int(len(seasons) / n_trials), n_trials]).astype(int).T
+        #self.aliens = aliens.reshape([int(len(aliens) / n_trials), n_trials]).astype(int).T
+        #self.phase = np.tile(agent_data["phase"], n_sim_per_subj)
 
         if fake:
             #TODO: adjust season sequences so the same TS doesn't appear twice in a row
