@@ -21,7 +21,12 @@ param_scalers = pd.DataFrame.from_dict(
     {'alpha': [0, 1], 'beta': [0, 10], 'forget': [0, 0.5]#, 'alpha_high': [0, 1], 'beta_high': [0, 10], 'forget_high': [0, 0.5]
      })
 param_names = np.array(param_scalers.columns.values)
+<<<<<<< HEAD
+#plot_dir = get_alien_paths(run_on_cluster)["fitting results"]
+plot_dir = "/Users/arammoghaddassi/Google Drive/Berkeley/CCN Lab/SLCN/models/paths/"
+=======
 plot_dir = get_alien_paths(run_on_cluster)["fitting results"]
+>>>>>>> 079bf213bc2897231357722e0665086880fa73a2
 n_iter = 500
 run_brute = False
 run_random = True

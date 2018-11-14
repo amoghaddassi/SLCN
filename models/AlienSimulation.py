@@ -1,59 +1,64 @@
 import pickle
-import os
 
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
-from shared_modeling_simulation import get_alien_paths
+from shared_modeling_simulation import get_paths
 from shared_aliens import alien_initial_Q, update_Qs_sim
 from AlienTask import Task
 
-
 # Switches for this script
-model_name = "soft"
+model_name = "hs"
 verbose = False
-n_subj = 31
+n_subj = 100
 n_sim_per_subj = 1
 start_id = 0
+n_sim = n_subj * n_sim_per_subj
 param_names = np.array(['alpha', 'beta', 'forget', 'alpha_high', 'beta_high', 'forget_high'])
-fake_data = False
-model_to_be_simulated = "specify"  # "MSE"  # "MCMC" "specify"
+fake_data = True
+model_to_be_simulated = "random"  # "MCMC" "random"
+n_seasons = 6
+make_plot = True
 # model_name = "/AliensMSEFitting/18-10-14/f_['alpha' 'beta' 'forget']_[[ 1 10  1]]_2018_10_14_9_47"  # 'Aliens/max_abf_2018_10_10_18_7_humans_n_samples10'  #
 # Get save path
-save_dir = get_alien_paths(False)['simulations']
-if not os.path.exists(save_dir):
-    os.makedirs(save_dir)
+save_dir = "/Users/arammoghaddassi/Google Drive/Berkeley/CCN Lab/SLCN/models/paths/simulations"
 
 # Get parameters
 parameters = pd.DataFrame(columns=np.append(param_names, ['sID']))
-parameter_dir = get_alien_paths(run_on_cluster=False)['fitting results']
+parameter_dir = get_paths(run_on_cluster=False)['fitting results']
 
-if model_to_be_simulated == 'specify':
+if model_to_be_simulated == 'random':
 
-    parameters['alpha'] = 0.01 + 0.05 * np.random.rand(n_subj)  # 0 < alpha < 0.2
-    parameters['beta'] = 6.5 + np.random.rand(n_subj)  # 1 < beta < 2
-    parameters['forget'] = 0.005 + 0.01 * np.random.rand(n_subj)  # 0 < forget < 0.1
+    parameters['alpha'] = 0.1 + 0.1 * np.random.rand(n_subj)  # 0 < alpha < 0.2
+    parameters['beta'] = 1 + 4 * np.random.rand(n_subj)  # 1 < beta < 2
+    parameters['forget'] = 0.01 * np.random.rand(n_subj)  # 0 < forget < 0.1
 
-    parameters['alpha_high'] = 0.3 + 0.1 * np.random.rand(n_subj)  # 0 < alpha_high < 0.2
-    parameters['beta_high'] = 4.5 + np.random.rand(n_subj)  # 1 < beta < 2
-    parameters['forget_high'] = 0.2 + 0.1 * np.random.rand(n_subj)
+    parameters['alpha_high'] = 0.2 * np.random.rand(n_subj)  # 0 < alpha_high < 0.2
+    parameters['beta_high'] = 1 + 4 * np.random.rand(n_subj)  # 1 < beta < 2
+    parameters['forget_high'] = 0.3 * np.random.rand(n_subj)
 
     parameters['sID'] = range(n_subj)
 
 # Load fitted parameters
 elif model_to_be_simulated == 'MSE':
 
-    parameters = pd.read_csv(parameter_dir + '/ten_best_{}.csv'.format(model_name), index_col=0)
-    n_subj = min(n_subj, parameters.shape[0])
-    parameters = parameters[:n_subj]
-    parameters['sID'] = range(n_subj)
+    # print('Loading {0}{1}.\n'.format(parameter_dir, model_name))
+    # with open(parameter_dir + model_name + '.pickle', 'rb') as handle:
+    #     brute_results = pickle.load(handle)
 
-    if 'alpha_high' not in parameters:
-        parameters['alpha_high'] = parameters['alpha'].copy()
-    if 'beta_high' not in parameters:
-        parameters['beta_high'] = parameters['beta'].copy()
-    if 'forget_high' not in parameters:
-        parameters['forget_high'] = parameters['forget'].copy()
+    # parameters['alpha'] = brute_results[0][0] * np.ones(n_sim)
+    # parameters['beta'] = brute_results[0][1] * np.ones(n_sim)
+    # parameters['forget'] = brute_results[0][2] * np.ones(n_sim)
+
+    parameters['alpha'] = 0.33 * np.ones(n_sim)
+    parameters['beta'] = 1.12 * np.ones(n_sim)
+    parameters['forget'] = 0.11 * np.ones(n_sim)
+
+    # TODO: Use indices 3, 4, 5 that actually correspond to these parameters!
+    parameters['alpha_high'] = parameters['alpha'].copy()  # brute_results[0][0] * np.ones(n_sim)
+    parameters['beta_high'] = parameters['beta'].copy()  # brute_results[0][1] * np.ones(n_sim)
+    parameters['forget_high'] = parameters['forget'].copy()  # brute_results[0][2] * np.ones(n_sim)
 
 elif model_to_be_simulated == 'MCMC':
 
@@ -72,26 +77,27 @@ elif model_to_be_simulated == 'MCMC':
     parameters = pd.DataFrame(np.array(parameters, dtype=float))
     parameters.columns = np.append(param_names, ['sID'])
 
+    n_sim = n_subj
+
 if verbose:
     print("Parameters: {}".format(parameters.round(3)))
 
 # Parameter shapes
-n_sim = n_subj * n_sim_per_subj
 beta_shape = (n_sim, 1)  # Q_low_sub.shape -> [n_subj, n_actions]
 beta_high_shape = (n_sim, 1)  # Q_high_sub.shape -> [n_subj, n_TS]
 forget_high_shape = (n_sim, 1, 1)  # -> [n_subj, n_seasons, n_TS]
 forget_shape = (n_sim, 1, 1, 1)  # Q_low[0].shape -> [n_subj, n_TS, n_aliens, n_actions]
 
 # Get numbers of things
-n_seasons, n_aliens, n_actions = 3, 4, 3
+n_aliens, n_actions = 4, 3
 n_TS = n_seasons
 n_alien_repetitions = np.array([13, 7, 7])  # InitialLearning, Refresher2, Refresher3
 n_season_repetitions = np.array([3, 2, 2])  # InitialLearning, Refresher2, Refresher3
 
 # Initialize task
-task = Task(n_subj)
-n_trials, _, _ = task.get_trial_sequence("C:/Users/maria/MEGAsync/Berkeley/TaskSets/Data/version3.1/",
-                                         n_subj, n_sim_per_subj, range(n_subj), fake_data)
+task = Task(n_subj, n_seasons)
+path = "/Users/arammoghaddassi/google drive/berkeley/ccn lab/slcn/models/paths"
+n_trials, _ = task.get_trial_sequence(path, n_subj, fake_data, range(n_subj), fake=True)
 print("n_trials", n_trials)
 
 # For saving data
@@ -107,7 +113,7 @@ Q_highs = np.zeros([n_trials, n_sim])
 
 print('Simulating {0} {2} agents on {1} trials.\n'.format(n_sim, n_trials, model_name))
 
-Q_low = alien_initial_Q * np.ones([n_sim, n_TS, n_aliens, n_actions])
+Q_low = alien_initial_Q * np.ones((n_sim, n_TS, n_aliens, n_actions))
 Q_high = alien_initial_Q * np.ones([n_sim, n_seasons, n_TS])
 
 # Bring parameters into the right shape
@@ -134,7 +140,7 @@ for trial in range(np.sum(n_trials)):
         update_Qs_sim(season, alien,
                            Q_low, Q_high,
                            beta, beta_high, alpha, alpha_high, forget, forget_high,
-                           n_sim, n_actions, n_TS, task, verbose=verbose)
+                           n_sim, n_actions, n_TS, task,  verbose=verbose)
 
     # Store trial data
     seasons[trial] = season
@@ -146,6 +152,14 @@ for trial in range(np.sum(n_trials)):
     # Q_lows[trial] = Q_low
     Q_highs[trial] = Q_high[np.arange(n_sim), season, TS]
     p_lows[trial] = p_low
+
+if make_plot:
+    learning_curve = np.mean(corrects, axis=1)
+    plt.errorbar(x=np.arange(n_trials),
+                 y= learning_curve,
+                 yerr=np.std(corrects, axis=1) / np.sqrt(corrects.shape[1]))
+    plt.ylim((0, 1))
+    plt.show()
 
 # Save data
 for sID in range(n_sim):
@@ -174,6 +188,6 @@ for sID in range(n_sim):
     subj_data["Q_TS"] = Q_highs[:, sID]
 
     # Save to disc
-    file_name = save_dir + "aliens_" + model_name + '_' + str(agent_ID) + ".csv"
+    file_name = save_dir + "/aliens_" + model_name + '_' + str(agent_ID) + ".csv"
     print('Saving file {0}'.format(file_name))
     subj_data.to_csv(file_name)

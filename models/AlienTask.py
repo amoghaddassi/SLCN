@@ -7,10 +7,11 @@ import re
 
 class Task(object):
 
-    def __init__(self, n_subj):
+    def __init__(self, n_subj, n_seasons):
 
         self.n_subj = n_subj
-                            # TS0
+        self.n_seasons = n_seasons
+        #Need to change size of self.TS with the n_seasons parameter
         self.TS = np.array([[[1, 6, 1],  # alien0, items0-2
                              [1, 1, 4],  # alien1, items0-2
                              [5, 1, 1],  # etc.
@@ -21,7 +22,21 @@ class Task(object):
                              [1, 1, 7],
                              [1, 3, 1]],
                             # TS2
-                            [[1, 1, 7],  # TS2
+                            [[1, 1, 7],
+                             [3, 1, 1],
+                             [1, 3, 1],
+                             [2, 1, 1]],
+                            [[1, 6, 1],  # alien0, items0-2
+                             [1, 1, 4],  # alien1, items0-2
+                             [5, 1, 1],  # etc.
+                             [10, 1, 1]],
+                            # TS1
+                            [[1, 1, 2],  # alien0, items0-2
+                             [1, 8, 1],  # etc.
+                             [1, 1, 7],
+                             [1, 3, 1]],
+                            # TS2
+                            [[1, 1, 7],
                              [3, 1, 1],
                              [1, 3, 1],
                              [2, 1, 1]]])
@@ -43,7 +58,8 @@ class Task(object):
 
         filenames = glob.glob(os.path.join(file_path, '*.csv'))
         n_trials = 100000
-        for filename in np.array(filenames)[subset_of_subj][:n_subj]:
+        #for filename in np.array(filenames)[subset_of_subj][:n_subj]:
+        for filename in filenames:
             agent_data = pd.read_csv(filename)
 
             # Remove all rows that do not contain 1InitialLearning data (-> jsPysch format)
@@ -57,13 +73,11 @@ class Task(object):
                 aliens = np.hstack([aliens, agent_data["sad_alien"]])
                 phase = np.hstack([phase, agent_data["phase"]])
                 correct = np.hstack([correct, agent_data["correct"]])
-                actions = np.hstack([actions, agent_data["item_chosen"]])
             except NameError:
                 seasons = agent_data["TS"]
                 aliens = agent_data["sad_alien"]
                 phase = agent_data["phase"]
                 correct = agent_data["correct"]
-                actions = agent_data["item_chosen"]
             n_trials = np.min([n_trials, agent_data.shape[0]])
 
         # Bring into right shape
@@ -74,14 +88,23 @@ class Task(object):
         self.phase = np.tile(agent_data["phase"], n_sim_per_subj)
 
         if fake:
-            self.seasons = np.tile(np.tile(np.repeat(np.arange(3), 80), 4), n_subj).reshape([n_subj, 3 * 80 * 4]).T  # np.zeros([n_subj, n_trials], dtype=int).T
-            self.aliens = np.tile(np.arange(4), int(n_subj * 80 * 3)).reshape([n_subj, 3 * 80 * 4]).astype(int).T
+            #TODO: adjust season sequences so the same TS doesn't appear twice in a row
+            self.ts_orders = [[0, 1, 2, 3, 4, 5],
+                                [1, 2, 0, 4, 5, 3],
+                                [2, 0, 1, 5, 3, 4]]
+            self.seasons = np.zeros([self.n_subj, self.n_seasons*80*4])
+            for i in range(self.n_subj):
+                order = np.random.choice(range(3))
+                sequence = np.tile(np.repeat(self.ts_orders[order], 80), 4)
+                self.seasons[i, :] = sequence
+            self.seasons = self.seasons.T.astype(np.int64)  # np.zeros([n_subj, n_trials], dtype=int).T
+            print(self.seasons)
+            self.aliens = np.tile(np.arange(4), int(n_subj * 80 * 6)).reshape([n_subj, self.n_seasons * 80 * 4]).astype(int).T
             n_trials = self.seasons.shape[0]
             self.phase = '1InitialLearning'
 
-        return (n_trials,
-                correct.reshape([int(len(correct) / n_trials), n_trials]).astype(int).T,
-                actions.reshape([int(len(correct) / n_trials), n_trials]).astype(int).T)
+        #return n_trials, correct.reshape([int(len(correct) / n_trials), n_trials]).astype(int).T
+        return n_trials, correct
 
     def present_stimulus(self, trial):
 

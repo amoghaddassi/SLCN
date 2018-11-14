@@ -23,8 +23,8 @@ def update_Qs_th_sim(season, alien,
     # TS = n_TS - T.sum(rand < cumsum, axis=1)
 
     # Calculate action probabilities based on TS
-    Q_low_sub = Q_low[T.arange(n_subj), TS, alien]  # Q_low_sub.shape -> [n_subj, n_actions]
-    p_low = T.nnet.softmax(beta * Q_low_sub)
+
+    p_low = T.nnet.softmax(beta * Q_low)
     rand = rs.uniform(size=(n_subj, 1))
     cumsum = T.extra_ops.cumsum(p_low, axis=1)
     action = n_actions - T.sum(rand < cumsum, axis=1)
@@ -60,7 +60,8 @@ def update_Qs_sim(season, alien,
                   n_subj, n_actions, n_TS, task, verbose=False):
 
     # Select TS
-    Q_high_sub = Q_high[np.arange(n_subj), season]  # Q_high_sub.shape -> (n_subj, n_TS)
+    index = np.arange(n_subj)
+    Q_high_sub = Q_high[index, np.array(season)]  # Q_high_sub.shape -> (n_subj, n_TS)
     p_high = softmax(beta_high * Q_high_sub, axis=1)
     # TS = season  # Flat
     # TS = 0  # fs
@@ -108,13 +109,13 @@ def update_Qs(season, alien, action, reward,
               beta, beta_high, alpha, alpha_high, forget, forget_high, n_subj, n_TS):
 
     # Select TS
-    Q_high_sub = Q_high[T.arange(n_subj), season]  # Q_high_sub.shape -> [n_subj, n_TS]
+    #Q_high_sub = Q_high[T.arange(n_subj), season]  # Q_high_sub.shape -> [n_subj, n_TS]
     # TS = season  # Flat
     # TS = T.argmax(Q_high_sub, axis=1)  # Hierarchical deterministic
-    p_high = T.nnet.softmax(beta_high * Q_high_sub)
-    rand = rs.uniform(size=(n_subj, 1))
-    cumsum = T.extra_ops.cumsum(p_high, axis=1)
-    TS = n_TS - T.sum(rand < cumsum, axis=1)
+    # p_high = T.nnet.softmax(beta_high * Q_high_sub)
+    # rand = rs.uniform(size=(n_subj, 1))
+    # cumsum = T.extra_ops.cumsum(p_high, axis=1)
+    # TS = n_TS - T.sum(rand < cumsum, axis=1)
 
     # Calculate action probabilities based on TS
     Q_low_sub = Q_low[T.arange(n_subj), TS, alien]  # Q_low_sub.shape -> [n_subj, n_actions]
@@ -150,7 +151,6 @@ def split_subj_in_half(n_subj):
 def softmax(X, axis=None):
     """
     Compute the softmax of each element along an axis of X.
-
     Parameters
     ----------
     X: ND-Array. Probably should be floats.
@@ -158,7 +158,6 @@ def softmax(X, axis=None):
         prior to exponentiation. Default = 1.0
     axis (optional): axis to compute values along. Default is the
         first non-singleton axis.
-
     Returns an array the same size as X. The result will sum to 1
     along the specified axis.
     """
